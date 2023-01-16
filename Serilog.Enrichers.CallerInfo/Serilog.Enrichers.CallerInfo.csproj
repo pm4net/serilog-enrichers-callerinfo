@@ -1,7 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <PackageId>Serilog.Enrichers.CallerInfo</PackageId>
+    <Title>A simple Serilog enricher to add information about the calling method.</Title>
+    <Authors>johannesmols</Authors>
+    <Copyright>Copyright (c) Johannes Mols 2022</Copyright>
+    <PackageTags>serilog enricher</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageDescription>A simple Serilog enricher to add information about the calling method.</PackageDescription>
+    <PackageProjectUrl>https://github.com/pm4net/serilog-enrichers-callerinfo</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/pm4net/serilog-enrichers-callerinfo.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
