@@ -38,7 +38,6 @@ namespace Serilog.Enrichers.pm4net
         /// <param name="logEvent">The logged event.</param>
         private void AddCallerInfo(LogEvent logEvent)
         {
-            var sb = new StringBuilder();
             var st = EnhancedStackTrace.Current();
 
             var frame = st.FirstOrDefault(x => x.HasMethod() && x.MethodInfo.IsInAllowedAssembly(_allowedAssemblies));

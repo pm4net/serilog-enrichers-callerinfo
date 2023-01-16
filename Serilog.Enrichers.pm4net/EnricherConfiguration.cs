@@ -12,20 +12,22 @@ namespace Serilog.Enrichers.pm4net
             this LoggerEnrichmentConfiguration enrichmentConfiguration,
             bool includeCallerInfo,
             bool includeFileInfo,
-            IEnumerable<string> allowedAssemblies)
+            IEnumerable<string> allowedAssemblies,
+            string prefix = "pm4net_")
         {
-            return enrichmentConfiguration.With(new Enricher(includeCallerInfo, includeFileInfo, allowedAssemblies));
+            return enrichmentConfiguration.With(new Enricher(includeCallerInfo, includeFileInfo, allowedAssemblies, prefix));
         }
 
         public static LoggerConfiguration WithPm4Net(
             this LoggerEnrichmentConfiguration enrichmentConfiguration, 
             bool includeCallerInfo,
             bool includeFileInfo,
-            string assemblyPrefix)
+            string assemblyPrefix,
+            string prefix = "pm4net_")
         {
             var callingAssembly = Assembly.GetCallingAssembly();
             var referencedAssemblies = GetAssemblies(callingAssembly, asm => asm.Name.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase));
-            return enrichmentConfiguration.WithPm4Net(includeCallerInfo, includeFileInfo, referencedAssemblies);
+            return enrichmentConfiguration.WithPm4Net(includeCallerInfo, includeFileInfo, referencedAssemblies, prefix);
         }
 
         /// <summary>
