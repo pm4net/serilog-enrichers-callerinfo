@@ -39,7 +39,7 @@ namespace Serilog.Enrichers.CallerInfo
             string prefix = "")
         {
             var callingAssembly = Assembly.GetCallingAssembly();
-            var referencedAssemblies = GetAssemblies(callingAssembly, asm => asm.Name.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase));
+            var referencedAssemblies = GetAssemblies(callingAssembly, asm => asm.Name?.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase) ?? false);
             return enrichmentConfiguration.WithCallerInfo(includeFileInfo, referencedAssemblies, prefix);
         }
 
