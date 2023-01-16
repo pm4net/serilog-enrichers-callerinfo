@@ -1,42 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Serilog.Enrichers.pm4net
+namespace Serilog.Enrichers.CallerInfo
 {
     public class Enricher : ILogEventEnricher
     {
-        private readonly bool _includeCallerInfo;
         private readonly bool _includeFileInfo;
         private readonly IEnumerable<string> _allowedAssemblies;
         private readonly string _prefix;
 
-        public Enricher(bool includeCallerInfo, bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "pm4net_")
+        public Enricher(bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "")
         {
-            _includeCallerInfo = includeCallerInfo;
             _includeFileInfo = includeFileInfo;
             _allowedAssemblies = allowedAssemblies ?? new List<string>();
-            _prefix = prefix;
-        }
-
-        public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
-        {
-            if (_includeCallerInfo)
-            {
-                AddCallerInfo(logEvent);
-            }
+            _prefix = prefix ?? string.Empty;
         }
 
         /// <summary>
         /// Add information about the origin of the logged message, such as method, namespace, and file information (from debugging symbols).
         /// </summary>
         /// <param name="logEvent">The logged event.</param>
-        private void AddCallerInfo(LogEvent logEvent)
+        /// <param name="propertyFactory">The property factory</param>
+        public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
         {
             var st = EnhancedStackTrace.Current();
 

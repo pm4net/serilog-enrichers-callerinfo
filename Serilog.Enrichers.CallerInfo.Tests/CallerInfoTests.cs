@@ -1,7 +1,7 @@
 using Serilog.Sinks.InMemory;
 using Serilog.Sinks.InMemory.Assertions;
 
-namespace Serilog.Enrichers.pm4net.Tests
+namespace Serilog.Enrichers.CallerInfo.Tests
 {
     public class CallerInfoTests
     {
@@ -9,7 +9,7 @@ namespace Serilog.Enrichers.pm4net.Tests
         public void EnrichmentTest()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithPm4Net(includeCallerInfo: true, includeFileInfo: true, "Serilog.Enrichers.pm4net.Tests")
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo.Tests", string.Empty)
                 .WriteTo.InMemory()
                 .CreateLogger();
             
@@ -17,19 +17,19 @@ namespace Serilog.Enrichers.pm4net.Tests
             InMemorySink.Instance.Should()
                 .HaveMessage("Test log message")
                 .Appearing().Once()
-                .WithProperty("pm4net_Method").WithValue("EnrichmentTest")
-                .And.WithProperty("pm4net_Namespace").WithValue("Serilog.Enrichers.pm4net.Tests.CallerInfoTests");
+                .WithProperty("Method").WithValue("EnrichmentTest")
+                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
         }
 
         [Fact]
         public void LocalFunctionsAreNotIncluded()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithPm4Net(includeCallerInfo: true, includeFileInfo: true, "Serilog.Enrichers.pm4net.Tests")
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo.Tests", string.Empty)
                 .WriteTo.InMemory()
                 .CreateLogger();
 
-            void LocalFunction(string arg)
+            static void LocalFunction(string arg)
             {
                 Log.Information(arg);
             }
@@ -39,8 +39,8 @@ namespace Serilog.Enrichers.pm4net.Tests
             InMemorySink.Instance.Should()
                 .HaveMessage("i like turtles")
                 .Appearing().Once()
-                .WithProperty("pm4net_Method").WithValue("LocalFunctionsAreNotIncluded")
-                .And.WithProperty("pm4net_Namespace").WithValue("Serilog.Enrichers.pm4net.Tests.CallerInfoTests");
+                .WithProperty("Method").WithValue("LocalFunctionsAreNotIncluded")
+                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
         }
     }
 }

@@ -1,33 +1,46 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
 using Serilog.Configuration;
 
-namespace Serilog.Enrichers.pm4net
+namespace Serilog.Enrichers.CallerInfo
 {
     public static class EnricherConfiguration
     {
-        public static LoggerConfiguration WithPm4Net(
+        /// <summary>
+        /// Enrich log events with information about the calling method.
+        /// </summary>
+        /// <param name="enrichmentConfiguration">The enrichment configuration.</param>
+        /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
+        /// <param name="allowedAssemblies">Which assemblies to consider when finding the calling method in the stack trace.</param>
+        /// <param name="prefix">An optional prefix to prepend to all property values.</param>
+        /// <returns>The modified logger configuration.</returns>
+        public static LoggerConfiguration WithCallerInfo(
             this LoggerEnrichmentConfiguration enrichmentConfiguration,
-            bool includeCallerInfo,
             bool includeFileInfo,
             IEnumerable<string> allowedAssemblies,
-            string prefix = "pm4net_")
+            string prefix = "")
         {
-            return enrichmentConfiguration.With(new Enricher(includeCallerInfo, includeFileInfo, allowedAssemblies, prefix));
+            return enrichmentConfiguration.With(new Enricher(includeFileInfo, allowedAssemblies, prefix));
         }
 
-        public static LoggerConfiguration WithPm4Net(
-            this LoggerEnrichmentConfiguration enrichmentConfiguration, 
-            bool includeCallerInfo,
+        /// <summary>
+        /// Enrich log events with information about the calling method.
+        /// </summary>
+        /// <param name="enrichmentConfiguration">The enrichment configuration.</param>
+        /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
+        /// <param name="assemblyPrefix">The prefix of assemblies to allow when finding the calling method in the stack trace.</param>
+        /// <param name="prefix">An optional prefix to prepend to all property values.</param>
+        /// <returns>The modified logger configuration.</returns>
+        public static LoggerConfiguration WithCallerInfo(
+            this LoggerEnrichmentConfiguration enrichmentConfiguration,
             bool includeFileInfo,
             string assemblyPrefix,
-            string prefix = "pm4net_")
+            string prefix = "")
         {
             var callingAssembly = Assembly.GetCallingAssembly();
             var referencedAssemblies = GetAssemblies(callingAssembly, asm => asm.Name.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase));
-            return enrichmentConfiguration.WithPm4Net(includeCallerInfo, includeFileInfo, referencedAssemblies, prefix);
+            return enrichmentConfiguration.WithCallerInfo(includeFileInfo, referencedAssemblies, prefix);
         }
 
         /// <summary>

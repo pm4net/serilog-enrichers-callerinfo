@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Serilog.Enrichers.pm4net\Serilog.Enrichers.pm4net.csproj" />
+    <ProjectReference Include="..\Serilog.Enrichers.CallerInfo\Serilog.Enrichers.CallerInfo.csproj" />
   </ItemGroup>
 
 </Project>

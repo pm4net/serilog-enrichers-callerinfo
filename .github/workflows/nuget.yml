@@ -6,7 +6,7 @@ on:
     - 'v*'
 
 env:
-  PROJECT_PATH: 'Serilog.Enrichers.pm4net/Serilog.Enrichers.pm4net.csproj'
+  PROJECT_PATH: 'Serilog.Enrichers.CallerInfo/Serilog.Enrichers.CallerInfo.csproj'
   PACKAGE_OUTPUT_DIRECTORY: ${{ github.workspace }}\output
   NUGET_SOURCE_URL: 'https://api.nuget.org/v3/index.json'
 
