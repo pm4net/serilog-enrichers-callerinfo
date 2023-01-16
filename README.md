@@ -9,7 +9,7 @@ A simple Serilog enricher to add information about the calling method. Loosely b
 
 Performance may be low due the usage of reflection to obtain assembly and method information, as well as the retrieval of the current stacktrace whenever a new log event is added.
 
-To get the actual method that emitted the log event, the stack trace is traversed and the first method that is in a matching assembly is considered the correct one. To configure which assemblies are the correct one, one can either use the constructur with `assemblyPrefix` or the one that acceptly directs a collection of fully qualified assembly names. When passing in a prefix, the assembly that calls the configuration method is recursively analyzed for referenced assemblies and whether they match the prefix. If you e.g. have a solution with project being called `MySolution.Web`, `MySolution.Domain`, etc., you can limit the included assemblies by passing in the prefix `MySolution`.
+To get the actual method that emitted the log event, the stack trace is traversed and the first method that is in a matching assembly is considered the correct one. To configure which assemblies are the correct one, one can either use the configuration method with `assemblyPrefix` or the one that directly accepts a collection of fully qualified assembly names. When passing in a prefix, the assembly that calls the configuration method is recursively analyzed for referenced assemblies and whether they match the prefix. If you e.g. have a solution with projects being called `MySolution.Web`, `MySolution.Domain`, etc., you can limit the included assemblies by passing in the prefix `MySolution`.
 
 ## Usage
 
