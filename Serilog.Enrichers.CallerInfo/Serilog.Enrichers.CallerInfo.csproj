@@ -5,7 +5,7 @@
     <PackageId>Serilog.Enrichers.CallerInfo</PackageId>
     <Title>A simple Serilog enricher to add information about the calling method.</Title>
     <Authors>johannesmols</Authors>
-    <Copyright>Copyright (c) Johannes Mols 2022</Copyright>
+    <Copyright>Copyright (c) Johannes Mols 2023</Copyright>
     <PackageTags>serilog enricher</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
