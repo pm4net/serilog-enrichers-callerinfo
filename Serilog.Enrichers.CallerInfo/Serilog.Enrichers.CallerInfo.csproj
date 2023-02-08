@@ -13,6 +13,8 @@
     <PackageDescription>A simple Serilog enricher to add information about the calling method.</PackageDescription>
     <PackageProjectUrl>https://github.com/pm4net/serilog-enrichers-callerinfo</PackageProjectUrl>
     <RepositoryUrl>https://github.com/pm4net/serilog-enrichers-callerinfo.git</RepositoryUrl>
+	<IncludeSymbols>true</IncludeSymbols>
+	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
