@@ -33,6 +33,11 @@ namespace Serilog.Enrichers.CallerInfo
             var method = frame?.MethodInfo.MethodBase;
             var type = method?.DeclaringType;
 
+            if (!string.IsNullOrWhiteSpace(_prefix))
+            {
+                logEvent.AddPropertyIfAbsent(new LogEventProperty("Serilog.Enrichers.CallerInfo_Prefix", new ScalarValue(_prefix)));
+            }
+
             if (type != null)
             {
                 logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Method", new ScalarValue(method.Name)));
