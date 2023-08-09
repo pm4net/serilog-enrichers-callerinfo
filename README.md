@@ -19,7 +19,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithCallerInfo(
         includeFileInfo: true, 
         assemblyPrefix: "MySolution.", 
-        prefix: "myprefix")
+        prefix: "myprefix_")
     .WriteTo.InMemory()
     .CreateLogger();
 
@@ -28,10 +28,43 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithCallerInfo(
         includeFileInfo: true, 
         allowedAssemblies: new List<string> { "Serilog.Enrichers.CallerInfo.Tests" }, 
-        prefix: "myprefix")
+        prefix: "myprefix_")
     .WriteTo.InMemory()
     .CreateLogger();
 ```
+
+Or via `appsettings.json` (using [Serilog.Settings.Configuration](https://github.com/serilog/serilog-settings-configuration)):
+
+```json
+// With assembly prefix
+"Serilog": {
+    "Enrich": [
+      {
+        "Name": "WithCallerInfo",
+        "Args": {
+          "includeFileInfo": "true",
+          "assemblyPrefix": "MySolution.",
+          "startingAssembly": "MySolution.Web"
+        }
+      }
+    ]
+  }
+
+// With fully qualified assembly names
+"Serilog": {
+    "Enrich": [
+      {
+        "Name": "WithCallerInfo",
+        "Args": {
+          "includeFileInfo": "true",
+          "allowedAssemblies": [ "Assembly1", "Assembly2" ],
+          "prefix": "myprefix_"
+        }
+      }
+    ]
+  }
+```
+Note that when using the assembly prefix and configuring via `appsettings.json`, you **have to define the starting assembly**, as the calling assembly is otherwise `Serilog.Settings.Configuration` (see [#1](https://github.com/pm4net/serilog-enrichers-callerinfo/issues/1))
 
 ## Properties
 

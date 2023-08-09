@@ -9,7 +9,7 @@ namespace Serilog.Enrichers.CallerInfo.Tests
         public void EnrichmentTest()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo.Tests", string.Empty)
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo.", string.Empty, "Serilog.Enrichers.CallerInfo.Tests")
                 .WriteTo.InMemory()
                 .CreateLogger();
             

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Serilog.Configuration;
 
@@ -25,21 +26,23 @@ namespace Serilog.Enrichers.CallerInfo
         }
 
         /// <summary>
-        /// Enrich log events with information about the calling method.
+        /// Enrich log events with information about the calling method. If using from appsettings.json, also provide the startingAssembly as it will otherwise be a Serilog assembly that is inferred as the calling assembly.
         /// </summary>
         /// <param name="enrichmentConfiguration">The enrichment configuration.</param>
         /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
         /// <param name="assemblyPrefix">The prefix of assemblies to allow when finding the calling method in the stack trace.</param>
         /// <param name="prefix">An optional prefix to prepend to all property values.</param>
+        /// <param name="startingAssembly">The optional name of the assembly from which to discover other related ones with the given prefix. If not provided, the calling assembly of this method is used as the starting point.</param>
         /// <returns>The modified logger configuration.</returns>
         public static LoggerConfiguration WithCallerInfo(
             this LoggerEnrichmentConfiguration enrichmentConfiguration,
             bool includeFileInfo,
             string assemblyPrefix,
-            string prefix = "")
+            string prefix = "",
+            string startingAssembly = "")
         {
-            var callingAssembly = Assembly.GetCallingAssembly();
-            var referencedAssemblies = GetAssemblies(callingAssembly, asm => asm.Name?.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase) ?? false);
+            var startAssembly = string.IsNullOrWhiteSpace(startingAssembly) ? Assembly.GetCallingAssembly() : Assembly.Load(startingAssembly);
+            var referencedAssemblies = GetAssemblies(startAssembly, asm => asm.Name?.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase) ?? false);
             return enrichmentConfiguration.WithCallerInfo(includeFileInfo, referencedAssemblies, prefix);
         }
 
@@ -60,7 +63,11 @@ namespace Serilog.Enrichers.CallerInfo
             do
             {
                 var asm = stack.Pop();
-                asmNames.Add(asm.GetName().Name);
+
+                if (filter(asm.GetName()))
+                {
+                    asmNames.Add(asm.GetName().Name);
+                }
 
                 foreach (var reference in asm.GetReferencedAssemblies())
                 {
