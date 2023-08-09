@@ -35,8 +35,8 @@ Log.Logger = new LoggerConfiguration()
 
 Or via `appsettings.json` (using [Serilog.Settings.Configuration](https://github.com/serilog/serilog-settings-configuration)):
 
+With assembly prefix (when configuring via `appsettings.json`, you **have to define the starting assembly**, as the calling assembly is otherwise `Serilog.Settings.Configuration` (see [#1](https://github.com/pm4net/serilog-enrichers-callerinfo/issues/1))):
 ```json
-// With assembly prefix
 "Serilog": {
     "Enrich": [
       {
@@ -49,8 +49,10 @@ Or via `appsettings.json` (using [Serilog.Settings.Configuration](https://github
       }
     ]
   }
+```
 
-// With fully qualified assembly names
+With fully qualified assembly names:
+```json
 "Serilog": {
     "Enrich": [
       {
@@ -64,7 +66,6 @@ Or via `appsettings.json` (using [Serilog.Settings.Configuration](https://github
     ]
   }
 ```
-Note that when using the assembly prefix and configuring via `appsettings.json`, you **have to define the starting assembly**, as the calling assembly is otherwise `Serilog.Settings.Configuration` (see [#1](https://github.com/pm4net/serilog-enrichers-callerinfo/issues/1))
 
 ## Properties
 
