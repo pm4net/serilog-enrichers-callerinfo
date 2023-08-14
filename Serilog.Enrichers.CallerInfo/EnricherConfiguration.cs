@@ -57,18 +57,17 @@ namespace Serilog.Enrichers.CallerInfo
         {
             var asmNames = new List<string>();
             var stack = new Stack<Assembly>();
-
             stack.Push(start);
 
             do
             {
                 var asm = stack.Pop();
-
-                if (filter(asm.GetName()))
+                if (!filter(asm.GetName()))
                 {
-                    asmNames.Add(asm.GetName().Name);
+                    continue;
                 }
 
+                asmNames.Add(asm.GetName().Name);
                 foreach (var reference in asm.GetReferencedAssemblies())
                 {
                     if (!filter(reference))
