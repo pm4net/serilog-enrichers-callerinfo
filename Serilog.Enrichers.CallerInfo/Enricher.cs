@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using Serilog.Core;
@@ -10,13 +11,13 @@ namespace Serilog.Enrichers.CallerInfo
     public class Enricher : ILogEventEnricher
     {
         private readonly bool _includeFileInfo;
-        private readonly IEnumerable<string> _allowedAssemblies;
+        private readonly ImmutableHashSet<string> _allowedAssemblies;
         private readonly string _prefix;
 
         public Enricher(bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "")
         {
             _includeFileInfo = includeFileInfo;
-            _allowedAssemblies = allowedAssemblies ?? new List<string>();
+            _allowedAssemblies = allowedAssemblies.ToImmutableHashSet(equalityComparer: StringComparer.OrdinalIgnoreCase) ?? ImmutableHashSet<string>.Empty;
             _prefix = prefix ?? string.Empty;
         }
 
@@ -45,7 +46,8 @@ namespace Serilog.Enrichers.CallerInfo
 
                 if (_includeFileInfo)
                 {
-                    var fileName = frame.GetFileName();
+                    var fullFileName = frame.GetFileName();
+                    var fileName = GetCleanFileName(fullFileName);
                     if (fileName != null)
                     {
                         logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}SourceFile", new ScalarValue(fileName)));
@@ -55,6 +57,26 @@ namespace Serilog.Enrichers.CallerInfo
                 }
             }
         }
+        
+        /// <summary>
+        /// Gets at most 3 levels of the full file name to make it easier to read and avoid leaking sensitive information.
+        /// </summary>
+        /// <param name="fullFileName"></param>
+        /// <returns></returns>
+        private static string GetCleanFileName(string fullFileName)
+        {
+            if (string.IsNullOrWhiteSpace(fullFileName))
+            {
+                return null;
+            }
+            var split = fullFileName.Split('\\');
+            if (split.Length < 3)
+            {
+                return fullFileName;
+            }
+            return $"{split[split.Length - 3]}\\{split[split.Length - 2]}\\{split[split.Length - 1]}";
+            
+        }
     }
 
     internal static class Extensions
@@ -63,15 +85,15 @@ namespace Serilog.Enrichers.CallerInfo
         /// Determines whether the resolved method originates in one of the allowed assemblies.
         /// </summary>
         /// <param name="method">The method to look up.</param>
-        /// <param name="allowedAssemblies">A list of fully qualified assembly names to check against.</param>
+        /// <param name="allowedAssemblies">A HashSet of fully qualified assembly names to check against.</param>
         /// <returns>True if the method originates from one of the allowed assemblies, false otherwise.</returns>
-        internal static bool IsInAllowedAssembly(this ResolvedMethod method, IEnumerable<string> allowedAssemblies)
+        internal static bool IsInAllowedAssembly(this ResolvedMethod method, ImmutableHashSet<string> allowedAssemblies)
         {
             var type = method.DeclaringType;
             if (type != null)
             {
                 var assemblyName = type.Assembly.GetName().Name;
-                return allowedAssemblies.Contains(assemblyName, StringComparer.OrdinalIgnoreCase);
+                return allowedAssemblies.Contains(assemblyName);
             }
 
             return false;

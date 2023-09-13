@@ -25,7 +25,7 @@ namespace Serilog.Enrichers.CallerInfo.Tests
         public void LocalFunctionsAreNotIncluded()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo.Tests", string.Empty)
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo", string.Empty)
                 .WriteTo.InMemory()
                 .CreateLogger();
 
@@ -41,6 +41,28 @@ namespace Serilog.Enrichers.CallerInfo.Tests
                 .Appearing().Once()
                 .WithProperty("Method").WithValue("LocalFunctionsAreNotIncluded")
                 .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+        }
+        [Fact]
+        public void PrivateFunctionShouldBeAvailable()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo", string.Empty)
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            
+
+            PrivateLocalFunction("i like turtles");
+
+            InMemorySink.Instance.Should()
+                .HaveMessage("i like turtles")
+                .Appearing().Once()
+                .WithProperty("Method").WithValue(nameof(PrivateLocalFunction))
+                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+        }
+        static void PrivateLocalFunction(string arg)
+        {
+            Log.Information(arg);
         }
     }
 }
