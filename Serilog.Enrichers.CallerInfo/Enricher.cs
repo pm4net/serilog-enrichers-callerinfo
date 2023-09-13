@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Serilog.Core;
 using Serilog.Events;
@@ -11,12 +12,14 @@ namespace Serilog.Enrichers.CallerInfo
     public class Enricher : ILogEventEnricher
     {
         private readonly bool _includeFileInfo;
+        private readonly int _filePathDepth;
         private readonly ImmutableHashSet<string> _allowedAssemblies;
         private readonly string _prefix;
 
-        public Enricher(bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "")
+        public Enricher(bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "",int filePathDepth=0)
         {
             _includeFileInfo = includeFileInfo;
+            _filePathDepth = filePathDepth;
             _allowedAssemblies = allowedAssemblies.ToImmutableHashSet(equalityComparer: StringComparer.OrdinalIgnoreCase) ?? ImmutableHashSet<string>.Empty;
             _prefix = prefix ?? string.Empty;
         }
@@ -47,7 +50,7 @@ namespace Serilog.Enrichers.CallerInfo
                 if (_includeFileInfo)
                 {
                     var fullFileName = frame.GetFileName();
-                    var fileName = GetCleanFileName(fullFileName);
+                    var fileName = GetCleanFileName(fullFileName,_filePathDepth);
                     if (fileName != null)
                     {
                         logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}SourceFile", new ScalarValue(fileName)));
@@ -57,26 +60,44 @@ namespace Serilog.Enrichers.CallerInfo
                 }
             }
         }
-        
+
         /// <summary>
-        /// Gets at most 3 levels of the full file name to make it easier to read and avoid leaking sensitive information.
+        /// Gets a clean file name from a full file path, optionally including a specified number of parent directories.
         /// </summary>
-        /// <param name="fullFileName"></param>
-        /// <returns></returns>
-        private static string GetCleanFileName(string fullFileName)
+        /// <param name="fullFileName">The full file path.</param>
+        /// <param name="depth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
+        /// <returns>A string representing the clean file name, or null if the full file path is null or whitespace.</returns>
+        private static string GetCleanFileName(string fullFileName, int depth=0)
         {
             if (string.IsNullOrWhiteSpace(fullFileName))
             {
                 return null;
             }
-            var split = fullFileName.Split('\\');
-            if (split.Length < 3)
+            if (depth <= 0) // if the depth is zero or negative, return the full path
             {
                 return fullFileName;
             }
-            return $"{split[split.Length - 3]}\\{split[split.Length - 2]}\\{split[split.Length - 1]}";
-            
+            var fileName = Path.GetFileName(fullFileName); // get the file name
+            var dirName = Path.GetDirectoryName(fullFileName); // get the directory name
+            if (string.IsNullOrWhiteSpace(dirName))
+            {
+                return fileName;
+            }
+            var pathSegments = new List<string> { fileName }; // create a list to store the path segments and add the file name to the list
+            for (var i = 0; i < depth - 1; i++) // loop until the desired depth is reached or there are no more parent directories
+            {
+                var parentDirName = Path.GetFileName(dirName); // get the parent directory name
+                if (string.IsNullOrWhiteSpace(parentDirName)) // if there is no parent directory, break the loop
+                {
+                    break;
+                }
+                pathSegments.Add(parentDirName); // add the parent directory name to the list
+                dirName = Path.GetDirectoryName(dirName); // get the grandparent directory name
+            }
+            pathSegments.Reverse(); // reverse the order of the list to get the correct path order
+            return Path.Combine(pathSegments.ToArray()); // join the path segments with the appropriate path separator and return the result
         }
+
     }
 
     internal static class Extensions
