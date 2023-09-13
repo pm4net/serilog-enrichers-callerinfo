@@ -9,7 +9,13 @@ A simple Serilog enricher to add information about the calling method. Loosely b
 
 Performance may be low due the usage of reflection to obtain assembly and method information, as well as the retrieval of the current stacktrace whenever a new log event is added.
 
-To get the actual method that emitted the log event, the stack trace is traversed and the first method that is in a matching assembly is considered the correct one. To configure which assemblies are the correct one, one can either use the configuration method with `assemblyPrefix` or the one that directly accepts a collection of fully qualified assembly names. When passing in a prefix, the assembly that calls the configuration method is recursively analyzed for referenced assemblies and whether they match the prefix. If you e.g. have a solution with projects being called `MySolution.Web`, `MySolution.Domain`, etc., you can limit the included assemblies by passing in the prefix `MySolution`. Be aware that the assembly from which you configure the logger must also have the correct prefix, otherwise no assemblies will be considered and the enricher won't work.
+To get the actual method that emitted the log event, the stack trace is traversed and the first method that is in a matching assembly is considered the correct one.
+
+To configure which assemblies are the correct one, one can either use the configuration method with `assemblyPrefix` or the one that directly accepts a collection of fully qualified assembly names. 
+When passing in only a prefix, the assembly that calls the configuration method is recursively analyzed for referenced assemblies and whether they match the prefix. 
+If you e.g. have a solution with projects being called `MySolution.Web`, `MySolution.Domain`, etc., you can limit the included assemblies by passing in the prefix `MySolution`. 
+Be aware that the assembly from which you configure the logger must also have the correct prefix, otherwise no assemblies will be considered and the enricher won't work.
+To define a custom assembly from which to start scanning referenced assemblies (instead of the calling assembly), you can define the optional `startingAssembly` parameter, which must be a fully qualified assembly name.
 
 ## Usage
 
@@ -18,8 +24,10 @@ To get the actual method that emitted the log event, the stack trace is traverse
 Log.Logger = new LoggerConfiguration()
     .Enrich.WithCallerInfo(
         includeFileInfo: true, 
-        assemblyPrefix: "MySolution.", 
-        prefix: "myprefix_")
+        assemblyPrefix: "MySolution.",
+        prefix: "myprefix_",
+        filePathDepth: 3,
+        excludedPrefixes: new List<string> { "SomeOtherProject." })
     .WriteTo.InMemory()
     .CreateLogger();
 
@@ -75,6 +83,6 @@ The following properties are added:
 |----------|-------------|------------|
 | `Method` | The calling method |  |
 | `Namespace` | The namespace of the calling method (including class name) |  |
-| `SourceFile` | The path of the source file of the calling method | `includeFileInfo` |
+| `SourceFile` | The path of the source file of the calling method | `includeFileInfo` and `filePathDepth` |
 | `LineNumber` | The line number of the calling method | `includeFileInfo` |
 | `ColumnNumber` | The column number of the calling method | `includeFileInfo` |
