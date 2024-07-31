@@ -86,15 +86,16 @@ namespace Serilog.Enrichers.CallerInfo
 
                 foreach (var reference in asm.GetReferencedAssemblies())
                 {
-                    if (AssemblyExistsInList(asmNames, asm) || !IsAssemblyIncluded(filter, asm) || IsAssemblyExcluded(exclude, asm))
+                    var referenceAsm = Assembly.Load(reference);
+                    if (AssemblyExistsInList(asmNames, referenceAsm) || !IsAssemblyIncluded(filter, referenceAsm) || IsAssemblyExcluded(exclude, referenceAsm))
                     {
                         continue;
                     }
 
-                    startingAssemblies.Push(Assembly.Load(reference));
+                    startingAssemblies.Push(referenceAsm);
                     asmNames.Add(reference.Name);
-
                 }
+
             } while (startingAssemblies.Count > 0);
 
             return asmNames;
