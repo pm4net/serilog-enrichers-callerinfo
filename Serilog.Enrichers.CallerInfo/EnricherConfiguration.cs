@@ -51,7 +51,12 @@ namespace Serilog.Enrichers.CallerInfo
             if (string.IsNullOrWhiteSpace(startingAssembly))
             {
                 startingAssemblies.Push(Assembly.GetCallingAssembly());
-                startingAssemblies.Push(Assembly.GetEntryAssembly());
+
+                var entryAssembly = Assembly.GetEntryAssembly();
+                if (entryAssembly != null)
+                {
+                    startingAssemblies.Push(entryAssembly);
+                }
             }
             else
             {
@@ -61,6 +66,7 @@ namespace Serilog.Enrichers.CallerInfo
             var referencedAssemblies = GetAssemblies(startingAssemblies,
                 asm => asm.Name?.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase) ?? false,
                 asm => excludedPrefixes?.Any(excluded => asm?.Name?.StartsWith(excluded, StringComparison.OrdinalIgnoreCase) ?? false) ?? false);
+            
             return enrichmentConfiguration.WithCallerInfo(includeFileInfo, referencedAssemblies, prefix, filePathDepth);
         }
 
