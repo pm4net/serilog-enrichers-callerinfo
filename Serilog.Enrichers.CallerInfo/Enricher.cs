@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using Serilog.Core;
 using Serilog.Events;
 
@@ -44,13 +40,13 @@ namespace Serilog.Enrichers.CallerInfo
 
             if (type != null)
             {
-                logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Method", new ScalarValue(method.Name)));
+                logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Method", new ScalarValue(method!.Name)));
                 logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Namespace", new ScalarValue(type.FullName)));
 
                 if (_includeFileInfo)
                 {
-                    var fullFileName = frame.GetFileName();
-                    var fileName = GetCleanFileName(fullFileName, _filePathDepth);
+                    var fullFileName = frame!.GetFileName();
+                    var fileName = GetCleanFileName(fullFileName!, _filePathDepth);
                     if (fileName != null)
                     {
                         logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}SourceFile", new ScalarValue(fileName)));
@@ -67,7 +63,7 @@ namespace Serilog.Enrichers.CallerInfo
         /// <param name="fullFileName">The full file path.</param>
         /// <param name="depth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         /// <returns>A string representing the clean file name, or null if the full file path is null or whitespace.</returns>
-        private static string GetCleanFileName(string fullFileName, int depth=0)
+        private static string? GetCleanFileName(string fullFileName, int depth = 0)
         {
             if (string.IsNullOrWhiteSpace(fullFileName))
             {
@@ -119,7 +115,7 @@ namespace Serilog.Enrichers.CallerInfo
             if (type != null)
             {
                 var assemblyName = type.Assembly.GetName().Name;
-                return allowedAssemblies.Contains(assemblyName);
+                return allowedAssemblies.Contains(assemblyName!);
             }
 
             return false;

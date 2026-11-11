@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
     <PackageId>Serilog.Enrichers.CallerInfo</PackageId>
     <Title>A simple Serilog enricher to add information about the calling method.</Title>
     <Authors>johannesmols</Authors>
@@ -25,8 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-    <PackageReference Include="Serilog" Version="3.0.1" />
+    <PackageReference Include="Ben.Demystifier" />
+    <PackageReference Include="Serilog" />
   </ItemGroup>
 	
   <ItemGroup>

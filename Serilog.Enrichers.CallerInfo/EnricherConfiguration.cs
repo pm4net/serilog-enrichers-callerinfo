@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using Serilog.Configuration;
 
 namespace Serilog.Enrichers.CallerInfo
@@ -45,7 +42,7 @@ namespace Serilog.Enrichers.CallerInfo
             string prefix = "",
             string startingAssembly = "",
             int filePathDepth = 0,
-            IEnumerable<string> excludedPrefixes = null)
+            IEnumerable<string>? excludedPrefixes = null)
         {
             var startingAssemblies = new Stack<Assembly>();
             if (string.IsNullOrWhiteSpace(startingAssembly))
@@ -78,7 +75,7 @@ namespace Serilog.Enrichers.CallerInfo
         /// <param name="filter">A filtering predicate based on the AssemblyName</param>
         /// <param name="exclude">An exclusion predicate based on the AssemblyName</param>
         /// <returns>The list of referenced Assembly names</returns>
-        private static IEnumerable<string> GetAssemblies(Stack<Assembly> startingAssemblies, Func<AssemblyName, bool> filter, Func<AssemblyName, bool> exclude=null)
+        private static IEnumerable<string> GetAssemblies(Stack<Assembly> startingAssemblies, Func<AssemblyName, bool> filter, Func<AssemblyName, bool>? exclude=null)
         {
             var asmNames = new HashSet<string>(comparer: StringComparer.OrdinalIgnoreCase);
 
@@ -87,7 +84,7 @@ namespace Serilog.Enrichers.CallerInfo
                 var asm = startingAssemblies.Pop();
                 if (!AssemblyExistsInList(asmNames, asm) && IsAssemblyIncluded(filter, asm) && !IsAssemblyExcluded(exclude, asm)  )
                 {
-                    asmNames.Add(asm.GetName().Name);
+                    asmNames.Add(asm.GetName().Name!);
                 }
 
                 foreach (var reference in asm.GetReferencedAssemblies())
@@ -99,7 +96,7 @@ namespace Serilog.Enrichers.CallerInfo
                     }
 
                     startingAssemblies.Push(referenceAsm);
-                    asmNames.Add(reference.Name);
+                    asmNames.Add(reference.Name!);
                 }
 
             } while (startingAssemblies.Count > 0);
@@ -107,12 +104,12 @@ namespace Serilog.Enrichers.CallerInfo
             return asmNames;
         }
 
-        private static bool IsAssemblyExcluded(Func<AssemblyName, bool> exclude, Assembly asm)
+        private static bool IsAssemblyExcluded(Func<AssemblyName, bool>? exclude, Assembly asm)
         {
             return exclude != null && exclude(asm.GetName());
         }
 
-        private static bool IsAssemblyIncluded(Func<AssemblyName, bool> include, Assembly asm)
+        private static bool IsAssemblyIncluded(Func<AssemblyName, bool>? include, Assembly asm)
         {
             return include != null && include(asm.GetName());
         }
