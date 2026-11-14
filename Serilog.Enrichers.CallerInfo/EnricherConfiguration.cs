@@ -3,6 +3,9 @@ using Serilog.Configuration;
 
 namespace Serilog.Enrichers.CallerInfo
 {
+    /// <summary>
+    /// Extension methods to configure the caller info enricher.
+    /// </summary>
     public static class EnricherConfiguration
     {
         /// <summary>
@@ -12,7 +15,7 @@ namespace Serilog.Enrichers.CallerInfo
         /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
         /// <param name="allowedAssemblies">Which assemblies to consider when finding the calling method in the stack trace.</param>
         /// <param name="prefix">An optional prefix to prepend to all property values.</param>
-        /// /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
+        /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         /// <returns>The modified logger configuration.</returns>
         public static LoggerConfiguration WithCallerInfo(
             this LoggerEnrichmentConfiguration enrichmentConfiguration,

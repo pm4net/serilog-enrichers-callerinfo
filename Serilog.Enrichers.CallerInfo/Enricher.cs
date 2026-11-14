@@ -5,6 +5,9 @@ using Serilog.Events;
 
 namespace Serilog.Enrichers.CallerInfo
 {
+    /// <summary>
+    /// Enriches log events with information about the calling method.
+    /// </summary>
     public class Enricher : ILogEventEnricher
     {
         private readonly bool _includeFileInfo;
@@ -12,6 +15,13 @@ namespace Serilog.Enrichers.CallerInfo
         private readonly ImmutableHashSet<string> _allowedAssemblies;
         private readonly string _prefix;
 
+        /// <summary>
+        /// Create a new enricher that adds information about the calling method to log events.
+        /// </summary>
+        /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
+        /// <param name="allowedAssemblies">Which assemblies to consider when finding the calling method in the stack trace.</param>
+        /// <param name="prefix">An optional prefix to prepend to all property values.</param>
+        /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         public Enricher(bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "", int filePathDepth = 0)
         {
             _includeFileInfo = includeFileInfo;
