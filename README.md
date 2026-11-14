@@ -86,3 +86,12 @@ The following properties are added:
 | `SourceFile` | The path of the source file of the calling method | `includeFileInfo` and `filePathDepth` |
 | `LineNumber` | The line number of the calling method | `includeFileInfo` |
 | `ColumnNumber` | The column number of the calling method | `includeFileInfo` |
+| `Serilog.Enrichers.CallerInfo_Prefix` | The configured prefix, so that consumers of the log events know how the other properties are named | `prefix` |
+
+If a `prefix` is configured, it is prepended to the name of all other properties (e.g. `myprefix_Method`).
+
+## Troubleshooting
+
+- **`SourceFile`, `LineNumber` and `ColumnNumber` are missing, but `Method` is there:** the file information is read from debugging symbols. Make sure the `.pdb` files are deployed next to your assemblies, or embed them with `<DebugType>embedded</DebugType>`.
+- **No properties are added at all:** no method in the stack trace belongs to one of the allowed assemblies. Check that the name of the assembly that writes the log event starts with the `assemblyPrefix`, and that it is referenced (directly or via other matching assemblies) by the starting assembly. Passing the assembly names explicitly via `allowedAssemblies` is a quick way to rule this out.
+- **Native AOT** is not supported, as the enricher relies on reflection and stack trace information that is not available there.
