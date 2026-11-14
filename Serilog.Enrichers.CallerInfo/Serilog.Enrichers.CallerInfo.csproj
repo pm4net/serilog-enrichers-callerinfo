@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;$(DefaultTargetFramework)</TargetFrameworks>
     <PackageId>Serilog.Enrichers.CallerInfo</PackageId>
     <Title>A simple Serilog enricher to add information about the calling method.</Title>
     <Authors>johannesmols</Authors>
