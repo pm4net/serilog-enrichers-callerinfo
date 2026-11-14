@@ -21,6 +21,10 @@ jobs:
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      actions: read
+      checks: write # for the test report
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +49,15 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build -c Release --report-trx --coverage --coverage-output-format cobertura --results-directory TestResults
+
+      # Shows the results of each target framework on the summary page of the run
+      - name: Publish test results
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v3
+        with:
+          name: Tests (${{ matrix.os }})
+          path: TestResults/**/*.trx
+          reporter: dotnet-trx
 
       - name: Upload test results
         if: ${{ !cancelled() }}
