@@ -1,4 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using System.Collections.Immutable;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using AwesomeAssertions;
 using Serilog.Events;
@@ -337,6 +339,73 @@ namespace Serilog.Enrichers.CallerInfo.Tests
             var logEvent = SingleEvent("i like turtles");
             PropertyOf(logEvent, "Method").Should().Be(nameof(NestedGeneric<int>.InstanceMethod));
             PropertyOf(logEvent, "Namespace").Should().Be(TestClass + "+NestedGeneric`1");
+        }
+
+        [Fact]
+        public void NullPrefixIsTreatedAsNoPrefix()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly }, prefix: null!)
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(NullPrefixIsTreatedAsNoPrefix));
+            logEvent.Properties.Should().NotContainKey("Serilog.Enrichers.CallerInfo_Prefix");
+        }
+
+        [Fact]
+        public void MethodsWithoutDebugSymbolsHaveNoFileInfo()
+        {
+            // The runtime libraries ship without debug symbols, so a method from there has no file information
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { typeof(List<>).Assembly.GetName().Name! })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            new List<int> { 1 }.ForEach(_ => Log.Information("Test log message"));
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(List<int>.ForEach));
+            PropertyOf(logEvent, "Namespace").Should().Be("System.Collections.Generic.List`1");
+            logEvent.Properties.Should().NotContainKey("SourceFile");
+            logEvent.Properties.Should().NotContainKey("LineNumber");
+            logEvent.Properties.Should().NotContainKey("ColumnNumber");
+        }
+
+        [Fact]
+        public void FileWithoutDirectoryIsReturnedAsIs()
+        {
+            // The compiler always writes full paths to the debug symbols, so this can't be tested through a log event
+            Enricher.GetCleanFileName("NoDirectory.cs", depth: 2).Should().Be("NoDirectory.cs");
+        }
+
+        [Fact]
+        public void MethodWithoutDeclaringTypeIsNotAllowed()
+        {
+            var method = new ResolvedMethod { DeclaringType = null };
+
+            method.IsInAllowedAssembly(ImmutableHashSet.Create(TestAssembly)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void MethodFromAssemblyWithoutNameIsNotAllowed()
+        {
+            var method = new ResolvedMethod { DeclaringType = new TypeInNamelessAssembly() };
+
+            method.IsInAllowedAssembly(ImmutableHashSet.Create(TestAssembly)).Should().BeFalse();
+        }
+
+        private class TypeInNamelessAssembly() : TypeDelegator(typeof(object))
+        {
+            public override Assembly Assembly => new NamelessAssembly();
+        }
+
+        private class NamelessAssembly : Assembly
+        {
+            public override AssemblyName GetName() => new();
         }
 
         private static void PrivateLocalFunction(string arg)

@@ -20,7 +20,7 @@ namespace Serilog.Enrichers.CallerInfo
         /// </summary>
         /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
         /// <param name="allowedAssemblies">Which assemblies to consider when finding the calling method in the stack trace.</param>
-        /// <param name="prefix">An optional prefix to prepend to all property values.</param>
+        /// <param name="prefix">An optional prefix to prepend to all property names.</param>
         /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         public Enricher(bool includeFileInfo, IEnumerable<string> allowedAssemblies, string prefix = "", int filePathDepth = 0)
         {
@@ -40,23 +40,21 @@ namespace Serilog.Enrichers.CallerInfo
             var st = EnhancedStackTrace.Current();
 
             var frame = st.FirstOrDefault(x => x.HasMethod() && x.MethodInfo.IsInAllowedAssembly(_allowedAssemblies));
-            var method = frame?.MethodInfo.MethodBase;
-            var type = method?.DeclaringType;
 
             if (!string.IsNullOrWhiteSpace(_prefix))
             {
                 logEvent.AddPropertyIfAbsent(new LogEventProperty("Serilog.Enrichers.CallerInfo_Prefix", new ScalarValue(_prefix)));
             }
 
-            if (type != null)
+            if (frame?.MethodInfo.MethodBase is { DeclaringType: { } type } method)
             {
-                logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Method", new ScalarValue(method!.Name)));
+                logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Method", new ScalarValue(method.Name)));
                 logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}Namespace", new ScalarValue(type.FullName)));
 
                 if (_includeFileInfo)
                 {
-                    var fullFileName = frame!.GetFileName();
-                    var fileName = GetCleanFileName(fullFileName!, _filePathDepth);
+                    var fullFileName = frame.GetFileName();
+                    var fileName = GetCleanFileName(fullFileName, _filePathDepth);
                     if (fileName != null)
                     {
                         logEvent.AddPropertyIfAbsent(new LogEventProperty($"{_prefix}SourceFile", new ScalarValue(fileName)));
@@ -73,7 +71,7 @@ namespace Serilog.Enrichers.CallerInfo
         /// <param name="fullFileName">The full file path.</param>
         /// <param name="depth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         /// <returns>A string representing the clean file name, or null if the full file path is null or whitespace.</returns>
-        private static string? GetCleanFileName(string fullFileName, int depth = 0)
+        internal static string? GetCleanFileName(string? fullFileName, int depth = 0)
         {
             if (string.IsNullOrWhiteSpace(fullFileName))
             {
@@ -125,7 +123,7 @@ namespace Serilog.Enrichers.CallerInfo
             if (type != null)
             {
                 var assemblyName = type.Assembly.GetName().Name;
-                return allowedAssemblies.Contains(assemblyName!);
+                return assemblyName != null && allowedAssemblies.Contains(assemblyName);
             }
 
             return false;

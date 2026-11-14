@@ -6,8 +6,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <!-- net10.0 runs against the netstandard2.0 build with compiler-generated async state machines, net11.0 with runtime async -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+  <!-- net10.0 runs against the netstandard2.0 build with compiler-generated async state machines, the default framework with runtime async -->
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(DefaultTargetFramework)'">
     <Features>$(Features);runtime-async=on</Features>
   </PropertyGroup>
 

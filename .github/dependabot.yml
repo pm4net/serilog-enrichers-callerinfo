@@ -5,8 +5,8 @@ updates:
     schedule:
       interval: weekly
     ignore:
-      # Minimum versions that the published package depends on, raising them forces consumers to upgrade
-      - dependency-name: Serilog
+      # Minimum version that the published package depends on, raising it forces consumers to upgrade
+      # Serilog is not ignored so that the version the tests run against stays current.
       - dependency-name: Ben.Demystifier
 
   - package-ecosystem: github-actions
