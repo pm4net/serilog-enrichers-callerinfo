@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Minimum versions that the published package depends on, raising them forces consumers to upgrade
+      - dependency-name: Serilog
+      - dependency-name: Ben.Demystifier
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".github\dependabot.yml" />
     <File Path=".github\workflows\nuget.yml" />
     <File Path=".github\workflows\tests.yml" />
     <File Path=".gitignore" />
