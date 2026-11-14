@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".github\dependabot.yml" />
+    <File Path=".github\workflows\nuget.yml" />
+    <File Path=".github\workflows\tests.yml" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="Serilog.Enrichers.CallerInfo.Tests/Serilog.Enrichers.CallerInfo.Tests.csproj" />
+  <Project Path="Serilog.Enrichers.CallerInfo/Serilog.Enrichers.CallerInfo.csproj" />
+</Solution>

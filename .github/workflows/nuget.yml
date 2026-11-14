@@ -1,35 +1,48 @@
-name: "Deploy project to NuGet"
+name: Publish to NuGet
 
 on:
   push:
     tags:
-    - 'v*'
+      - 'v*'
 
 env:
-  PROJECT_PATH: 'Serilog.Enrichers.CallerInfo/Serilog.Enrichers.CallerInfo.csproj'
-  PACKAGE_OUTPUT_DIRECTORY: ${{ github.workspace }}\output
-  NUGET_SOURCE_URL: 'https://api.nuget.org/v3/index.json'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  deploy:
-    name: 'Deploy'
-    runs-on: 'windows-latest'
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # needed for NuGet trusted publishing
     steps:
-    - name: 'Checkout'
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v7
 
-    - name: 'Restore packages'
-      run: dotnet restore ${{ env.PROJECT_PATH }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
 
-    - name: 'Build project'
-      run: dotnet build ${{ env.PROJECT_PATH }} --no-restore -c Release
+      - name: Restore
+        run: dotnet restore --locked-mode
 
-    - name: 'Get Version'
-      id: version
-      uses: battila7/get-version-action@v2
+      - name: Build
+        run: dotnet build --no-restore -c Release
 
-    - name: 'Pack project'
-      run: dotnet pack ${{ env.PROJECT_PATH }} --no-restore --no-build --include-symbols -c Release -p:PackageVersion=${{ steps.version.outputs.version-without-v }} --output ${{ env.PACKAGE_OUTPUT_DIRECTORY }}
+      - name: Test
+        run: dotnet test --no-build -c Release
 
-    - name: 'Push package'
-      run: dotnet nuget push ${{ env.PACKAGE_OUTPUT_DIRECTORY }}\*.nupkg -k ${{ secrets.NUGET_AUTH_TOKEN }} -s ${{ env.NUGET_SOURCE_URL }} --skip-duplicate
+      # The version comes from the tag, e.g. v1.2.3 -> 1.2.3
+      - name: Pack
+        run: dotnet pack Serilog.Enrichers.CallerInfo --no-build -c Release -p:PackageVersion="${GITHUB_REF_NAME#v}" -o output
+
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push package
+        run: dotnet nuget push "output/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate

@@ -1,34 +1,94 @@
-name: "Build and Run Tests"
+name: Build and test
 
 on:
   push:
-  pull_request:
     branches: [ master ]
-    paths-ignore:
-      - '**/README.md'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      actions: read
+      checks: write # for the test report
     strategy:
+      fail-fast: false
       matrix:
-        dotnet-version: ['6.0.x']
+        os: [ ubuntu-latest, windows-latest ]
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup .NET SDK ${{ matrix.dotnet-version }}
-        uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
-      - name: Install dependencies
-        run: dotnet restore
+          # SDK from global.json, plus the .NET 10 runtime that the tests also run on
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --no-restore -c Release
+
       - name: Test
-        run: dotnet test --no-restore --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
-      - name: Upload dotnet test results
-        uses: actions/upload-artifact@v4
+        run: dotnet test --no-build -c Release --report-trx --coverage --coverage-output-format cobertura --results-directory TestResults
+
+      # Shows the results of each target framework on the summary page of the run.
+      # Skipped for forks and Dependabot, their token is read-only and can't create the check.
+      - name: Publish test results
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) }}
+        uses: dorny/test-reporter@v3
         with:
-          name: dotnet-results-${{ matrix.dotnet-version }}
-          path: TestResults-${{ matrix.dotnet-version }}
-        # Use always() to always run this step to publish test results when there are test failures
-        if: ${{ always() }}
+          name: Tests (${{ matrix.os }})
+          path: TestResults/**/*.trx
+          reporter: dotnet-trx
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults
+
+  pack:
+    name: Pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      # Also validates the package against the last release
+      - name: Pack
+        run: dotnet pack Serilog.Enrichers.CallerInfo --no-restore -c Release -o output
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: output

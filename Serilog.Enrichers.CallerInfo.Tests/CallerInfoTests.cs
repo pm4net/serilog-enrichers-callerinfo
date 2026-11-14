@@ -1,24 +1,31 @@
+﻿using System.Diagnostics;
+using System.Collections.Immutable;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using AwesomeAssertions;
+using Serilog.Events;
 using Serilog.Sinks.InMemory;
-using Serilog.Sinks.InMemory.Assertions;
 
 namespace Serilog.Enrichers.CallerInfo.Tests
 {
     public class CallerInfoTests
     {
+        private const string TestAssembly = "Serilog.Enrichers.CallerInfo.Tests";
+        private const string TestClass = "Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests";
+
         [Fact]
         public void CanManuallySpecifyAssemblies()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { "Serilog.Enrichers.CallerInfo.Tests" })
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
                 .WriteTo.InMemory()
                 .CreateLogger();
 
             Log.Error(new Exception("Error occurred!"), "Test log message");
-            InMemorySink.Instance.Should()
-                .HaveMessage("Test log message")
-                .Appearing().Once()
-                .WithProperty("Method").WithValue(nameof(CanManuallySpecifyAssemblies))
-                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(CanManuallySpecifyAssemblies));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
         }
 
         [Fact]
@@ -28,45 +35,42 @@ namespace Serilog.Enrichers.CallerInfo.Tests
                 .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo")
                 .WriteTo.InMemory()
                 .CreateLogger();
-            
+
             Log.Error(new Exception("Error occurred!"), "Test log message");
-            InMemorySink.Instance.Should()
-                .HaveMessage("Test log message")
-                .Appearing().Once()
-                .WithProperty("Method").WithValue(nameof(CanAutodetectAssemblies))
-                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(CanAutodetectAssemblies));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
         }
 
         [Fact]
         public void CanAutodetectFromManualStartingAssembly()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo", startingAssembly: "Serilog.Enrichers.CallerInfo.Tests")
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo", startingAssembly: TestAssembly)
                 .WriteTo.InMemory()
                 .CreateLogger();
 
             Log.Error(new Exception("Error occurred!"), "Test log message");
-            InMemorySink.Instance.Should()
-                .HaveMessage("Test log message")
-                .Appearing().Once()
-                .WithProperty("Method").WithValue(nameof(CanAutodetectFromManualStartingAssembly))
-                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(CanAutodetectFromManualStartingAssembly));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
         }
 
         [Fact]
         public void CanExcludeAssemblies()
         {
             Log.Logger = new LoggerConfiguration()
-                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo", excludedPrefixes: new List<string> { "Serilog.Enrichers.CallerInfo.Tests" })
+                .Enrich.WithCallerInfo(includeFileInfo: true, "Serilog.Enrichers.CallerInfo", excludedPrefixes: new List<string> { TestAssembly })
                 .WriteTo.InMemory()
                 .CreateLogger();
 
             Log.Error(new Exception("Error occurred!"), "Test log message");
-            InMemorySink.Instance.Should()
-                .HaveMessage("Test log message")
-                .Appearing().Once()
-                .Match(e => !e.Properties.ContainsKey("Method"), "Is excluded")
-                .And.Match(e => !e.Properties.ContainsKey("Namespace"), "Is excluded");
+
+            var logEvent = SingleEvent("Test log message");
+            logEvent.Properties.Should().NotContainKey("Method");
+            logEvent.Properties.Should().NotContainKey("Namespace");
         }
 
         [Fact]
@@ -78,10 +82,103 @@ namespace Serilog.Enrichers.CallerInfo.Tests
                 .CreateLogger();
 
             Log.Error(new Exception("Error occurred!"), "Test log message");
-            InMemorySink.Instance.Should()
-                .HaveMessage("Test log message")
-                .Appearing().Once()
-                .WithProperty("SourceFile").WithValue(Path.Combine("Serilog.Enrichers.CallerInfo.Tests", "CallerInfoTests.cs"));
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "SourceFile").Should().Be(Path.Combine(TestAssembly, "CallerInfoTests.cs"));
+        }
+
+        [Fact]
+        public void FilePathDepthOfOneOnlyGivesFileName()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly }, filePathDepth: 1)
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "SourceFile").Should().Be("CallerInfoTests.cs");
+        }
+
+        [Fact]
+        public void FullFilePathIsUsedByDefault()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "SourceFile").Should().Be(CurrentFile());
+        }
+
+        [Fact]
+        public void LineAndColumnNumberPointToTheLoggingCall()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message"); var line = CurrentLine();
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "LineNumber").Should().Be(line);
+            PropertyOf(logEvent, "ColumnNumber").Should().Be(13);
+        }
+
+        [Fact]
+        public void FileInfoCanBeLeftOut()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: false, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(FileInfoCanBeLeftOut));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+            logEvent.Properties.Should().NotContainKey("SourceFile");
+            logEvent.Properties.Should().NotContainKey("LineNumber");
+            logEvent.Properties.Should().NotContainKey("ColumnNumber");
+        }
+
+        [Fact]
+        public void PrefixIsPrependedToAllProperties()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly }, prefix: "caller_")
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Serilog.Enrichers.CallerInfo_Prefix").Should().Be("caller_");
+            PropertyOf(logEvent, "caller_Method").Should().Be(nameof(PrefixIsPrependedToAllProperties));
+            PropertyOf(logEvent, "caller_Namespace").Should().Be(TestClass);
+            logEvent.Properties.Should().ContainKeys("caller_SourceFile", "caller_LineNumber", "caller_ColumnNumber");
+            logEvent.Properties.Should().NotContainKey("Method");
+        }
+
+        [Fact]
+        public void ExistingPropertiesAreNotOverwritten()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message {Method}", "custom");
+
+            var logEvent = SingleEvent("Test log message {Method}");
+            PropertyOf(logEvent, "Method").Should().Be("custom");
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
         }
 
         [Fact]
@@ -99,11 +196,9 @@ namespace Serilog.Enrichers.CallerInfo.Tests
 
             LocalFunction("i like turtles");
 
-            InMemorySink.Instance.Should()
-                .HaveMessage("i like turtles")
-                .Appearing().Once()
-                .WithProperty("Method").WithValue(nameof(LocalFunctionsAreNotIncluded))
-                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(LocalFunctionsAreNotIncluded));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
         }
 
         [Fact]
@@ -116,16 +211,246 @@ namespace Serilog.Enrichers.CallerInfo.Tests
 
             PrivateLocalFunction("i like turtles");
 
-            InMemorySink.Instance.Should()
-                .HaveMessage("i like turtles")
-                .Appearing().Once()
-                .WithProperty("Method").WithValue(nameof(PrivateLocalFunction))
-                .And.WithProperty("Namespace").WithValue("Serilog.Enrichers.CallerInfo.Tests.CallerInfoTests");
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(PrivateLocalFunction));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public void LambdasAreNotIncluded()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            var message = "i like turtles";
+            Action lambda = () => Log.Information(message);
+            lambda();
+
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(LambdasAreNotIncluded));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public async Task AsyncMethodIsResolvedBeforeAwait()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+            await Task.Yield();
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(AsyncMethodIsResolvedBeforeAwait));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public async Task AsyncMethodIsResolvedAfterAwait()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            await Task.Delay(1, TestContext.Current.CancellationToken);
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(AsyncMethodIsResolvedAfterAwait));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public async Task CalledAsyncMethodIsResolved()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            await PrivateAsyncFunction("i like turtles");
+
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(PrivateAsyncFunction));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public async Task AsyncMethodsUseTheExpectedAsyncImplementation()
+        {
+            // Guards the test setup itself: the async tests should cover both compiler-generated state machines and runtime async
+            await Task.Yield();
+            var method = new StackFrame().GetMethod()!;
+
+#if NET11_0_OR_GREATER
+            method.Name.Should().Be(nameof(AsyncMethodsUseTheExpectedAsyncImplementation));
+            method.DeclaringType.Should().Be<CallerInfoTests>();
+#else
+            method.Name.Should().Be("MoveNext");
+            method.DeclaringType.Should().NotBe<CallerInfoTests>();
+#endif
+        }
+
+        [Fact]
+        public void IteratorMethodIsResolved()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            PrivateIterator("i like turtles").ToList();
+
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(PrivateIterator));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public void GenericMethodIsResolved()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            PrivateGenericFunction("i like turtles");
+
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(PrivateGenericFunction));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public void NestedGenericTypeIsReportedWithItsFullName()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            new NestedGeneric<int>().InstanceMethod("i like turtles");
+
+            var logEvent = SingleEvent("i like turtles");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(NestedGeneric<int>.InstanceMethod));
+            PropertyOf(logEvent, "Namespace").Should().Be(TestClass + "+NestedGeneric`1");
+        }
+
+        [Fact]
+        public void NullPrefixIsTreatedAsNoPrefix()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { TestAssembly }, prefix: null!)
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            Log.Information("Test log message");
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(NullPrefixIsTreatedAsNoPrefix));
+            logEvent.Properties.Should().NotContainKey("Serilog.Enrichers.CallerInfo_Prefix");
+        }
+
+        [Fact]
+        public void MethodsWithoutDebugSymbolsHaveNoFileInfo()
+        {
+            // The runtime libraries ship without debug symbols, so a method from there has no file information
+            Log.Logger = new LoggerConfiguration()
+                .Enrich.WithCallerInfo(includeFileInfo: true, new List<string> { typeof(List<>).Assembly.GetName().Name! })
+                .WriteTo.InMemory()
+                .CreateLogger();
+
+            new List<int> { 1 }.ForEach(_ => Log.Information("Test log message"));
+
+            var logEvent = SingleEvent("Test log message");
+            PropertyOf(logEvent, "Method").Should().Be(nameof(List<int>.ForEach));
+            PropertyOf(logEvent, "Namespace").Should().Be("System.Collections.Generic.List`1");
+            logEvent.Properties.Should().NotContainKey("SourceFile");
+            logEvent.Properties.Should().NotContainKey("LineNumber");
+            logEvent.Properties.Should().NotContainKey("ColumnNumber");
+        }
+
+        [Fact]
+        public void FileWithoutDirectoryIsReturnedAsIs()
+        {
+            // The compiler always writes full paths to the debug symbols, so this can't be tested through a log event
+            Enricher.GetCleanFileName("NoDirectory.cs", depth: 2).Should().Be("NoDirectory.cs");
+        }
+
+        [Fact]
+        public void MethodWithoutDeclaringTypeIsNotAllowed()
+        {
+            var method = new ResolvedMethod { DeclaringType = null };
+
+            method.IsInAllowedAssembly(ImmutableHashSet.Create(TestAssembly)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void MethodFromAssemblyWithoutNameIsNotAllowed()
+        {
+            var method = new ResolvedMethod { DeclaringType = new TypeInNamelessAssembly() };
+
+            method.IsInAllowedAssembly(ImmutableHashSet.Create(TestAssembly)).Should().BeFalse();
+        }
+
+        private class TypeInNamelessAssembly() : TypeDelegator(typeof(object))
+        {
+            public override Assembly Assembly => new NamelessAssembly();
+        }
+
+        private class NamelessAssembly : Assembly
+        {
+            public override AssemblyName GetName() => new();
         }
 
         private static void PrivateLocalFunction(string arg)
         {
             Log.Information(arg);
         }
+
+        private static async Task PrivateAsyncFunction(string arg)
+        {
+            await Task.Delay(1, TestContext.Current.CancellationToken);
+            Log.Information(arg);
+        }
+
+        private static IEnumerable<int> PrivateIterator(string arg)
+        {
+            Log.Information(arg);
+            yield return 1;
+        }
+
+        private static void PrivateGenericFunction<T>(T arg) where T : notnull
+        {
+            Log.Information(arg.ToString()!);
+        }
+
+        private class NestedGeneric<T>
+        {
+            public void InstanceMethod(string arg)
+            {
+                Log.Information(arg);
+            }
+        }
+
+        private static LogEvent SingleEvent(string messageTemplate)
+        {
+            return InMemorySink.Instance.LogEvents.Should().ContainSingle(e => e.MessageTemplate.Text == messageTemplate).Subject;
+        }
+
+        private static object? PropertyOf(LogEvent logEvent, string name)
+        {
+            logEvent.Properties.Should().ContainKey(name);
+            return logEvent.Properties[name].Should().BeOfType<ScalarValue>().Subject.Value;
+        }
+
+        private static int CurrentLine([CallerLineNumber] int line = 0) => line;
+
+        private static string CurrentFile([CallerFilePath] string file = "") => file;
     }
 }

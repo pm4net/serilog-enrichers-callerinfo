@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using Serilog.Configuration;
 
 namespace Serilog.Enrichers.CallerInfo
 {
+    /// <summary>
+    /// Extension methods to configure the caller info enricher.
+    /// </summary>
     public static class EnricherConfiguration
     {
         /// <summary>
@@ -14,8 +14,8 @@ namespace Serilog.Enrichers.CallerInfo
         /// <param name="enrichmentConfiguration">The enrichment configuration.</param>
         /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
         /// <param name="allowedAssemblies">Which assemblies to consider when finding the calling method in the stack trace.</param>
-        /// <param name="prefix">An optional prefix to prepend to all property values.</param>
-        /// /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
+        /// <param name="prefix">An optional prefix to prepend to all property names.</param>
+        /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         /// <returns>The modified logger configuration.</returns>
         public static LoggerConfiguration WithCallerInfo(
             this LoggerEnrichmentConfiguration enrichmentConfiguration,
@@ -33,7 +33,7 @@ namespace Serilog.Enrichers.CallerInfo
         /// <param name="enrichmentConfiguration">The enrichment configuration.</param>
         /// <param name="includeFileInfo">Whether to include the caller's file information (file name, line number, column number).</param>
         /// <param name="assemblyPrefix">The prefix of assemblies to allow when finding the calling method in the stack trace.</param>
-        /// <param name="prefix">An optional prefix to prepend to all property values.</param>
+        /// <param name="prefix">An optional prefix to prepend to all property names.</param>
         /// <param name="startingAssembly">The optional name of the assembly from which to discover other related ones with the given prefix. If not provided, the calling assembly of this method is used as the starting point.</param>
         /// <param name="filePathDepth">The number of parent directories to include in the file name. If zero or negative, the full path is returned. If larger than the actual depth of the file, the full path is also returned.</param>
         /// <param name="excludedPrefixes">Which assembly prefixes to exclude when finding the calling method in the stack trace.</param>
@@ -45,7 +45,7 @@ namespace Serilog.Enrichers.CallerInfo
             string prefix = "",
             string startingAssembly = "",
             int filePathDepth = 0,
-            IEnumerable<string> excludedPrefixes = null)
+            IEnumerable<string>? excludedPrefixes = null)
         {
             var startingAssemblies = new Stack<Assembly>();
             if (string.IsNullOrWhiteSpace(startingAssembly))
@@ -64,8 +64,8 @@ namespace Serilog.Enrichers.CallerInfo
             }
 
             var referencedAssemblies = GetAssemblies(startingAssemblies,
-                asm => asm.Name?.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase) ?? false,
-                asm => excludedPrefixes?.Any(excluded => asm?.Name?.StartsWith(excluded, StringComparison.OrdinalIgnoreCase) ?? false) ?? false);
+                name => name.StartsWith(assemblyPrefix, StringComparison.OrdinalIgnoreCase),
+                name => excludedPrefixes?.Any(excluded => name.StartsWith(excluded, StringComparison.OrdinalIgnoreCase)) ?? false);
             
             return enrichmentConfiguration.WithCallerInfo(includeFileInfo, referencedAssemblies, prefix, filePathDepth);
         }
@@ -75,31 +75,29 @@ namespace Serilog.Enrichers.CallerInfo
         /// Adapted from <see href="https://stackoverflow.com/a/10253634/2102106"/>
         /// </summary>
         /// <param name="startingAssemblies">The starting assembly.</param>
-        /// <param name="filter">A filtering predicate based on the AssemblyName</param>
-        /// <param name="exclude">An exclusion predicate based on the AssemblyName</param>
+        /// <param name="filter">A filtering predicate based on the name of the assembly</param>
+        /// <param name="exclude">An exclusion predicate based on the name of the assembly</param>
         /// <returns>The list of referenced Assembly names</returns>
-        private static IEnumerable<string> GetAssemblies(Stack<Assembly> startingAssemblies, Func<AssemblyName, bool> filter, Func<AssemblyName, bool> exclude=null)
+        private static IEnumerable<string> GetAssemblies(Stack<Assembly> startingAssemblies, Func<string, bool> filter, Func<string, bool> exclude)
         {
             var asmNames = new HashSet<string>(comparer: StringComparer.OrdinalIgnoreCase);
 
             do
             {
                 var asm = startingAssemblies.Pop();
-                if (!AssemblyExistsInList(asmNames, asm) && IsAssemblyIncluded(filter, asm) && !IsAssemblyExcluded(exclude, asm)  )
+                if (GetNameIfNewAndAllowed(asmNames, asm.GetName(), filter, exclude) is { } asmName)
                 {
-                    asmNames.Add(asm.GetName().Name);
+                    asmNames.Add(asmName);
                 }
 
                 foreach (var reference in asm.GetReferencedAssemblies())
                 {
-                    var referenceAsm = Assembly.Load(reference);
-                    if (AssemblyExistsInList(asmNames, referenceAsm) || !IsAssemblyIncluded(filter, referenceAsm) || IsAssemblyExcluded(exclude, referenceAsm))
+                    // Check the name before loading, so that unrelated references are never loaded
+                    if (GetNameIfNewAndAllowed(asmNames, reference, filter, exclude) is { } referenceName)
                     {
-                        continue;
+                        startingAssemblies.Push(Assembly.Load(reference));
+                        asmNames.Add(referenceName);
                     }
-
-                    startingAssemblies.Push(referenceAsm);
-                    asmNames.Add(reference.Name);
                 }
 
             } while (startingAssemblies.Count > 0);
@@ -107,19 +105,13 @@ namespace Serilog.Enrichers.CallerInfo
             return asmNames;
         }
 
-        private static bool IsAssemblyExcluded(Func<AssemblyName, bool> exclude, Assembly asm)
+        /// <summary>
+        /// Returns the name of the assembly if it should be added to the list, or null if it is already in there, filtered out or excluded.
+        /// </summary>
+        private static string? GetNameIfNewAndAllowed(HashSet<string> asmNames, AssemblyName asm, Func<string, bool> filter, Func<string, bool> exclude)
         {
-            return exclude != null && exclude(asm.GetName());
-        }
-
-        private static bool IsAssemblyIncluded(Func<AssemblyName, bool> include, Assembly asm)
-        {
-            return include != null && include(asm.GetName());
-        }
-
-        private static bool AssemblyExistsInList(IEnumerable<string> asmNames, Assembly asm)
-        {
-            return asmNames.Contains(asm.GetName().Name);
+            var name = asm.Name;
+            return name != null && !asmNames.Contains(name) && filter(name) && !exclude(name) ? name : null;
         }
     }
 }
