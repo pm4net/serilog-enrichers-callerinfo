@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using FluentAssertions;
+using AwesomeAssertions;
 using Serilog.Events;
 using Serilog.Sinks.InMemory;
 
@@ -254,7 +254,7 @@ namespace Serilog.Enrichers.CallerInfo.Tests
                 .WriteTo.InMemory()
                 .CreateLogger();
 
-            await Task.Delay(1);
+            await Task.Delay(1, TestContext.Current.CancellationToken);
             Log.Information("Test log message");
 
             var logEvent = SingleEvent("Test log message");
@@ -329,7 +329,7 @@ namespace Serilog.Enrichers.CallerInfo.Tests
 
         private static async Task PrivateAsyncFunction(string arg)
         {
-            await Task.Delay(1);
+            await Task.Delay(1, TestContext.Current.CancellationToken);
             Log.Information(arg);
         }
 

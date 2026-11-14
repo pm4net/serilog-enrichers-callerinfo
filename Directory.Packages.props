@@ -5,18 +5,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Ben.Demystifier" Version="0.4.1" />
+    <!-- Minimum Serilog version required by the published package, the tests override it with a newer one -->
     <PackageVersion Include="Serilog" Version="3.0.1" />
-    <PackageVersion Include="FluentAssertions" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageVersion Include="Serilog.Sinks.InMemory" Version="0.11.0" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageVersion>
-    <PackageVersion Include="coverlet.collector" Version="10.1.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageVersion>
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.3" />
+    <PackageVersion Include="Serilog.Sinks.InMemory" Version="2.0.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
 </Project>
