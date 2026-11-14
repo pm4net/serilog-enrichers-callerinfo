@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using AwesomeAssertions;
 using Serilog.Events;
@@ -275,6 +276,22 @@ namespace Serilog.Enrichers.CallerInfo.Tests
             var logEvent = SingleEvent("i like turtles");
             PropertyOf(logEvent, "Method").Should().Be(nameof(PrivateAsyncFunction));
             PropertyOf(logEvent, "Namespace").Should().Be(TestClass);
+        }
+
+        [Fact]
+        public async Task AsyncMethodsUseTheExpectedAsyncImplementation()
+        {
+            // Guards the test setup itself: the async tests should cover both compiler-generated state machines and runtime async
+            await Task.Yield();
+            var method = new StackFrame().GetMethod()!;
+
+#if NET11_0_OR_GREATER
+            method.Name.Should().Be(nameof(AsyncMethodsUseTheExpectedAsyncImplementation));
+            method.DeclaringType.Should().Be<CallerInfoTests>();
+#else
+            method.Name.Should().Be("MoveNext");
+            method.DeclaringType.Should().NotBe<CallerInfoTests>();
+#endif
         }
 
         [Fact]
